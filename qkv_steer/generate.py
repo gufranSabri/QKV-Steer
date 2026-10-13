@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from pathlib import Path
-
-from tqdm import tqdm
 
 from qkv_steer._vendor.seed import pick_device, seed_everything
 from qkv_steer.cache import load_or_compute_direction
@@ -13,6 +12,17 @@ from qkv_steer.data_loader import DataLoader
 from qkv_steer.debug import log_field_by_view, log_mask, log_pushes
 from qkv_steer.directions import binary_mask, continuous_mask, mass_mean_direction
 from qkv_steer.llm_wrapper import LLM_Wrapper
+
+logger = logging.getLogger("qkv_steer.generate")
+
+
+def setup_file_logging(log_path: Path) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler(log_path)
+    handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)-7s | %(message)s", datefmt="%H:%M:%S"))
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(handler)
 
 
 def build_push_binary(mask, direction, sigma, alpha: float) -> dict:
@@ -46,6 +56,9 @@ def run(
     seed_everything(cfg.train.seed)
     device = pick_device()
 
+    out_dir = Path("runs") / run_name
+    setup_file_logging(out_dir / "generate.log")
+
     loader = DataLoader(cfg, dataset_name, llm_alias)
     wrapper = LLM_Wrapper(cfg, device, detector_checkpoint=detector_checkpoint)
 
@@ -64,7 +77,6 @@ def run(
             log_field_by_view("direction", direction)
             log_field_by_view("sigma", sigma)
 
-    out_dir = Path("runs") / run_name
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "steer_responses.jsonl"
 
@@ -83,8 +95,8 @@ def run(
             gen = wrapper.generate(example.prompt, cfg.dataset.max_new_tokens)
             diverged = gen["response"] != unsteered["response"]
             if diverged:
-                tqdm.write(
-                    f"[warn] idx={example.idx}: live regeneration diverged from QKV-Lens's "
+                logger.warning(
+                    f"idx={example.idx}: live regeneration diverged from QKV-Lens's "
                     f"saved unsteered response (numeric drift from batch_size=1 vs the original "
                     f"extraction's batching) -- using the live one as the steering baseline.\n"
                     f"  saved: {unsteered['response']!r}\n"
@@ -114,8 +126,8 @@ def run(
                 log_field_by_view(f"idx={example.idx} steered_field", steered["field"])
                 p_before = wrapper.detect(gen["field"])
                 p_after = wrapper.detect(steered["field"])
-                tqdm.write(
-                    f"[verbose] idx={example.idx} P(hallucinated): {p_before:.4f} -> {p_after:.4f} "
+                logger.info(
+                    f"idx={example.idx} P(hallucinated): {p_before:.4f} -> {p_after:.4f} "
                     f"(delta {p_after - p_before:+.4f})"
                 )
 

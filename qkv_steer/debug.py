@@ -1,22 +1,25 @@
 from __future__ import annotations
 
+import logging
+
 import torch
-from tqdm import tqdm
+
+logger = logging.getLogger("qkv_steer.verbose")
 
 
 def stats_line(name: str, t: torch.Tensor) -> str:
     t = t.detach().float()
     if t.numel() == 0:
-        return f"[verbose] {name}: empty"
+        return f"{name}: empty"
     return (
-        f"[verbose] {name}: shape={tuple(t.shape)} "
+        f"{name}: shape={tuple(t.shape)} "
         f"norm={t.norm().item():.4g} mean={t.mean().item():.4g} std={t.std().item():.4g} "
         f"min={t.min().item():.4g} max={t.max().item():.4g}"
     )
 
 
 def log_tensor(name: str, t: torch.Tensor) -> None:
-    tqdm.write(stats_line(name, t))
+    logger.info(stats_line(name, t))
 
 
 def log_field_by_view(name: str, field: torch.Tensor) -> None:
@@ -28,7 +31,7 @@ def log_mask(name: str, mask: torch.Tensor) -> None:
     if mask.dtype == torch.bool:
         n_selected = int(mask.sum().item())
         n_total = mask.numel()
-        tqdm.write(f"[verbose] {name}: {n_selected}/{n_total} cells selected ({100 * n_selected / n_total:.1f}%)")
+        logger.info(f"{name}: {n_selected}/{n_total} cells selected ({100 * n_selected / n_total:.1f}%)")
     else:
         log_tensor(name, mask)
     log_field_by_view(name, mask.float())
@@ -36,7 +39,7 @@ def log_mask(name: str, mask: torch.Tensor) -> None:
 
 def log_pushes(name: str, pushes: dict) -> None:
     if not pushes:
-        tqdm.write(f"[verbose] {name}: empty (no cells pushed)")
+        logger.info(f"{name}: empty (no cells pushed)")
         return
     all_vals = []
     for push_by_segment in pushes.values():
@@ -45,5 +48,5 @@ def log_pushes(name: str, pushes: dict) -> None:
     flat = torch.cat(all_vals)
     n_layers_views = len(pushes)
     n_cells = sum(len(d) for d in pushes.values())
-    tqdm.write(f"[verbose] {name}: {n_layers_views} (layer,view) pairs, {n_cells} cells pushed")
+    logger.info(f"{name}: {n_layers_views} (layer,view) pairs, {n_cells} cells pushed")
     log_tensor(f"{name}.values", flat)
