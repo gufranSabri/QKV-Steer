@@ -1,0 +1,50 @@
+llm:
+  name: meta-llama/Llama-3.1-8B
+  dtype: bfloat16
+  alias: llama3.1_8b
+
+dataset:
+  name: truthfulqa
+  n_samples: 817
+  max_new_tokens: 64
+  prompt_template: "Answer the question concisely. Q: {question} A:"
+
+extract:
+  dtype: float16
+  max_tokens: 100
+  batch_size: 8
+  n_segments: null
+  l_eff: null
+  pool: mean
+  source: qkv
+
+labeling:
+  scheme: bleurt
+  bleurt_threshold: 0.5
+  bleurt_checkpoint: models/BLEURT-20-D12
+
+model:
+  backbone: layer_grid
+  embed_dim: 2048
+  conv1d_layers: 2
+  lstm_hidden: 2048
+  lstm_layers: 1
+  dropout: 0.3
+  keep_channels: [Q, K]
+  token_buckets: null
+  layer_permute_seed: null
+  segment_permute_seed: null
+  collapse_axis: null
+  layer_grid_use_gate: true
+  layer_grid_use_conv: true
+  layer_grid_use_skip: true
+
+train:
+  seed: 42
+
+steer:
+  mask_type: binary
+  threshold: 0.5
+  alpha: 1.0
+
+data_root: /scratch/ahmedubc/QKV-Lens-data

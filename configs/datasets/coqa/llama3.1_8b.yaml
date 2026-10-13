@@ -1,0 +1,8 @@
+llm:
+  name: meta-llama/Llama-3.1-8B
+  alias: llama3.1_8b
+
+dataset:
+  name: coqa
+  n_samples: 10000
+  prompt_template: "Answer the question concisely based on the context: \n {story} \n Q: {question} A:"

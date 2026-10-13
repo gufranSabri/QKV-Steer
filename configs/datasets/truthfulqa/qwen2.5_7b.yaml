@@ -1,0 +1,10 @@
+llm:
+  name: Qwen/Qwen2.5-7B
+  alias: qwen2.5_7b
+
+extract:
+  n_segments: 32
+
+dataset:
+  name: truthfulqa
+  n_samples: 817

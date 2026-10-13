@@ -1,0 +1,7 @@
+llm:
+  name: facebook/opt-6.7b
+  alias: opt_6.7b
+
+dataset:
+  name: triviaqa
+  n_samples: 10000

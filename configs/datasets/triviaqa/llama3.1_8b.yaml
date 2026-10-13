@@ -1,0 +1,7 @@
+llm:
+  name: meta-llama/Llama-3.1-8B
+  alias: llama3.1_8b
+
+dataset:
+  name: triviaqa
+  n_samples: 10000

@@ -1,0 +1,8 @@
+llm:
+  name: facebook/opt-6.7b
+  alias: opt_6.7b
+
+dataset:
+  name: coqa
+  n_samples: 10000
+  prompt_template: "Answer the question concisely based on the context: \n {story} \n Q: {question} A:"

@@ -1,0 +1,11 @@
+llm:
+  name: Qwen/Qwen2.5-7B
+  alias: qwen2.5_7b
+
+extract:
+  n_segments: 32
+
+dataset:
+  name: coqa
+  n_samples: 10000
+  prompt_template: "Answer the question concisely based on the context: \n {story} \n Q: {question} A:"

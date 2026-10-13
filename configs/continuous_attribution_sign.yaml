@@ -1,0 +1,3 @@
+steer:
+  mask_type: continuous
+  alpha: 1.0
