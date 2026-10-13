@@ -40,5 +40,6 @@ def build_backbone(cfg, field_shape: tuple[int, int] | None = None, in_ch: int |
             use_gate=cfg.model.layer_grid_use_gate,
             use_conv=cfg.model.layer_grid_use_conv,
             use_skip=cfg.model.layer_grid_use_skip,
+            local_hidden=cfg.model.layer_grid_local_hidden,
         )
     raise ValueError(f"unknown backbone {name!r}")

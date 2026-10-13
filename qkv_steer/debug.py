@@ -28,12 +28,7 @@ def log_field_by_view(name: str, field: torch.Tensor) -> None:
 
 
 def log_mask(name: str, mask: torch.Tensor) -> None:
-    if mask.dtype == torch.bool:
-        n_selected = int(mask.sum().item())
-        n_total = mask.numel()
-        logger.info(f"{name}: {n_selected}/{n_total} cells selected ({100 * n_selected / n_total:.1f}%)")
-    else:
-        log_tensor(name, mask)
+    log_tensor(name, mask)
     log_field_by_view(name, mask.float())
 
 

@@ -38,13 +38,13 @@ model:
   layer_grid_use_gate: true
   layer_grid_use_conv: true
   layer_grid_use_skip: true
+  layer_grid_local_hidden: 32
 
 train:
   seed: 42
 
 steer:
-  mask_type: binary
-  threshold: 0.5
   alpha: 1.0
+  steer_direction: both
 
 data_root: /scratch/ahmedubc/QKV-Lens-data

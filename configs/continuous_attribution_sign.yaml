@@ -1,4 +1,6 @@
 steer:
-  mask_type: continuous
   alpha: 1.0
   steer_direction: both   # "both" | "up_only" | "down_only"
+  clip_percentile: null   # e.g. 0.95 to clip |saliency| outliers before normalizing; null disables
+  steer_nonhallucinations: skip   # "skip" | "down" | "up" -- what to do when p_before < hallucination_threshold
+  hallucination_threshold: 0.5

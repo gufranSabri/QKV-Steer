@@ -8,14 +8,15 @@ export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
 RERUN=${RERUN:-0}
 LLM_ALIAS=${LLM_ALIAS:-llama3.1_8b}
-WINNING_CONFIG=${WINNING_CONFIG:-configs/binary_mass_mean.yaml}
+WINNING_CONFIG=${WINNING_CONFIG:-configs/continuous_attribution_sign.yaml}
+KEEP_CHANNELS=${KEEP_CHANNELS:-QK}
 EXTRA_ARGS=${EXTRA_ARGS:-}
 read -ra EVAL_METHODS <<< "${EVAL_METHODS:-lev}"
 
 for DATASET in triviaqa coqa; do
-  RUN_NAME="$(basename "$WINNING_CONFIG" .yaml)_${DATASET}"
+  RUN_NAME="$(basename "$WINNING_CONFIG" .yaml)_${DATASET}_${KEEP_CHANNELS}"
   DEST="runs/${RUN_NAME}/steer_responses.jsonl"
-  DETECTOR_CHECKPOINT="detectors/${LLM_ALIAS}_${DATASET}/best.pt"
+  DETECTOR_CHECKPOINT="detectors/${LLM_ALIAS}_${DATASET}_${KEEP_CHANNELS}/best.pt"
 
   if [[ "$RERUN" == "1" && -f "$DEST" ]]; then
     rm -f "$DEST"
@@ -30,6 +31,7 @@ for DATASET in triviaqa coqa; do
     --llm-alias "$LLM_ALIAS" \
     --run-name "$RUN_NAME" \
     --detector-checkpoint "$DETECTOR_CHECKPOINT" \
+    --keep-channels "$KEEP_CHANNELS" \
     $EXTRA_ARGS
 
   if [[ ! -s "$DEST" ]]; then

@@ -28,6 +28,18 @@ VALID_SCHEMES = ("exact_match", "bleurt")
 VALID_SOURCES = ("qkv", "hidden-states")
 VALID_COLLAPSE_AXES = ("M", "L", "channels")
 
+# Maps a --keep-channels combo name to its channel list; also used as the
+# detector checkpoint folder suffix, e.g. detectors/{llm}_{dataset}_{combo}.
+KEEP_CHANNELS_COMBOS = {
+    "Q": ["Q"],
+    "K": ["K"],
+    "V": ["V"],
+    "QK": ["Q", "K"],
+    "QV": ["Q", "V"],
+    "KV": ["K", "V"],
+    "QKV": ["Q", "K", "V"],
+}
+
 # Per-model n_segments baked into that model's own config for a structural
 # reason (not an ablation override) -- lets dataset_dir_for tell "this
 # model's one true n_segments" apart from a pooling-ablation sweep's M.
@@ -104,6 +116,9 @@ class ModelConfig:
     layer_grid_use_gate: bool = True
     layer_grid_use_conv: bool = True
     layer_grid_use_skip: bool = True
+    # Hidden width of layer_grid's local conv residual; must match the
+    # checkpoint's trained width or load_state_dict will size-mismatch.
+    layer_grid_local_hidden: int = 16
 
 
 @dataclass
@@ -129,15 +144,21 @@ class TrainConfig:
 
 @dataclass
 class SteerConfig:
-    mask_type: str = "binary"        # "binary" | "continuous"
-    threshold: float = 0.5           # only used when mask_type == "binary"
     alpha: float = 1.0               # push strength multiplier
-    steer_direction: str = "both"    # only used when mask_type == "continuous":
-                                      # "both" | "up_only" | "down_only"
+    steer_direction: str = "both"    # "both" | "up_only" | "down_only"
+    # Clip |saliency| to this percentile (0-1) before normalizing to [-1, 1];
+    # null disables clipping. Guards against a single outlier cell squashing
+    # every other cell's mask value toward 0.
+    clip_percentile: float | None = None
+    # What to do when the detector says the unsteered response is NOT
+    # hallucinated (p_before < hallucination_threshold):
+    # "skip" -- don't steer, steered = unsteered.
+    # "down" -- steer anyway with the normal (anti-hallucination) sign.
+    # "up"   -- steer anyway with the sign flipped (toward MORE hallucination).
+    steer_nonhallucinations: str = "skip"
+    hallucination_threshold: float = 0.5
 
     def validate(self) -> None:
-        if self.mask_type not in ("binary", "continuous"):
-            raise ValueError(f"steer.mask_type must be 'binary' or 'continuous', got {self.mask_type!r}")
         if self.alpha <= 0.0:
             raise ValueError("steer.alpha must be > 0")
         if self.steer_direction not in ("both", "up_only", "down_only"):
@@ -145,6 +166,15 @@ class SteerConfig:
                 f"steer.steer_direction must be 'both', 'up_only', or 'down_only', "
                 f"got {self.steer_direction!r}"
             )
+        if self.steer_nonhallucinations not in ("skip", "down", "up"):
+            raise ValueError(
+                f"steer.steer_nonhallucinations must be 'skip', 'down', or 'up', "
+                f"got {self.steer_nonhallucinations!r}"
+            )
+        if not (0.0 <= self.hallucination_threshold <= 1.0):
+            raise ValueError(f"steer.hallucination_threshold must be in [0, 1], got {self.hallucination_threshold!r}")
+        if self.clip_percentile is not None and not (0.0 < self.clip_percentile <= 1.0):
+            raise ValueError(f"steer.clip_percentile must be in (0, 1], got {self.clip_percentile!r}")
 
 
 @dataclass

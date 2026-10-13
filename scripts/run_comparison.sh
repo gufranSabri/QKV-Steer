@@ -10,45 +10,73 @@ export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 RERUN=${RERUN:-0}
 DATASETS=${DATASETS:-"truthfulqa"}
 LLM_ALIAS=${LLM_ALIAS:-qwen2.5_7b}
-N_SAMPLES=${N_SAMPLES:-10}
+N_SAMPLES=${N_SAMPLES:-50}
 CONFIG=${CONFIG:-configs/continuous_attribution_sign.yaml}
-read -ra ALPHAS <<< "${ALPHAS:-5 7 9 11 13 15}"
-read -ra STEER_DIRECTIONS <<< "${STEER_DIRECTIONS:-both up_only down_only}"
-read -ra EVAL_METHODS <<< "${EVAL_METHODS:-lev llm_judge_cloud}"
+# read -ra ALPHAS <<< "${ALPHAS:-5 7 9 11 13 15}"
+read -ra ALPHAS <<< "${ALPHAS:-7}"
+# read -ra STEER_DIRECTIONS <<< "${STEER_DIRECTIONS:-both up_only down_only}"
+read -ra STEER_DIRECTIONS <<< "${STEER_DIRECTIONS:-both}"
+read -ra KEEP_CHANNELS_LIST <<< "${KEEP_CHANNELS_LIST:-Q K V QV QKV}"
+read -ra STEER_NONHALLUCINATIONS_LIST <<< "${STEER_NONHALLUCINATIONS_LIST:-skip}"
+read -ra HALLUCINATION_THRESHOLDS <<< "${HALLUCINATION_THRESHOLDS:-0.25 0.5 0.75}"
+read -ra EVAL_METHODS <<< "${EVAL_METHODS:-llm_judge_cloud}"
 
 for ALPHA in "${ALPHAS[@]}"; do
   for DATASET in $DATASETS; do
-    DETECTOR_CHECKPOINT="detectors/${LLM_ALIAS}_${DATASET}/best.pt"
+    for KEEP_CHANNELS in "${KEEP_CHANNELS_LIST[@]}"; do
+      DETECTOR_CHECKPOINT="detectors/${LLM_ALIAS}_${DATASET}_${KEEP_CHANNELS}/best.pt"
 
-    for STEER_DIRECTION in "${STEER_DIRECTIONS[@]}"; do
+      for STEER_DIRECTION in "${STEER_DIRECTIONS[@]}"; do
+        for STEER_NONHALLUCINATIONS in "${STEER_NONHALLUCINATIONS_LIST[@]}"; do
+          for HALLUCINATION_THRESHOLD in "${HALLUCINATION_THRESHOLDS[@]}"; do
 
-      RUN_NAME="$(basename "$CONFIG" .yaml)_${DATASET}_alpha${ALPHA}_${STEER_DIRECTION}"
-      DEST="runs/${RUN_NAME}/steer_responses.jsonl"
+            RUN_NAME="$(basename "$CONFIG" .yaml)_${DATASET}_${KEEP_CHANNELS}_alpha${ALPHA}_${STEER_DIRECTION}_${STEER_NONHALLUCINATIONS}_thr${HALLUCINATION_THRESHOLD}"
+            DEST="runs/${RUN_NAME}/steer_responses.jsonl"
 
-      if [[ "$RERUN" == "1" && -f "$DEST" ]]; then
-        rm -f "$DEST"
-      fi
+            if [[ "$RERUN" == "1" && -f "$DEST" ]]; then
+              rm -f "$DEST"
+            fi
 
-      echo "========================================"
-      echo "Run: $RUN_NAME"
-      echo "========================================"
+            echo "========================================"
+            echo "Run: $RUN_NAME"
+            echo "========================================"
 
-      python3 -m qkv_steer.generate \
-        --config "$CONFIG" \
-        --dataset "$DATASET" \
-        --llm-alias "$LLM_ALIAS" \
-        --run-name "$RUN_NAME" \
-        --detector-checkpoint "$DETECTOR_CHECKPOINT" \
-        --n-samples "$N_SAMPLES" --verbose --alpha "$ALPHA" --steer-direction "$STEER_DIRECTION"
+            python3 -m qkv_steer.generate \
+              --config "$CONFIG" \
+              --dataset "$DATASET" \
+              --llm-alias "$LLM_ALIAS" \
+              --run-name "$RUN_NAME" \
+              --detector-checkpoint "$DETECTOR_CHECKPOINT" \
+              --keep-channels "$KEEP_CHANNELS" \
+              --steer-nonhallucinations "$STEER_NONHALLUCINATIONS" \
+              --hallucination-threshold "$HALLUCINATION_THRESHOLD" \
+              --n-samples "$N_SAMPLES" --verbose --alpha "$ALPHA" --steer-direction "$STEER_DIRECTION"
 
-      if [[ ! -s "$DEST" ]]; then
-        echo "  [error] $RUN_NAME produced no rows in $DEST -- skipping evaluation"
-        continue
-      fi
+            if [[ ! -s "$DEST" ]]; then
+              echo "  [error] $RUN_NAME produced no rows in $DEST -- skipping evaluation"
+              continue
+            fi
 
-      for EVAL_METHOD in "${EVAL_METHODS[@]}"; do
-        python3 -m qkv_steer.evaluate --run-name "$RUN_NAME" --method "$EVAL_METHOD"
+            for EVAL_METHOD in "${EVAL_METHODS[@]}"; do
+              python3 -m qkv_steer.evaluate --run-name "$RUN_NAME" --method "$EVAL_METHOD"
+            done
+          done
+        done
       done
     done
   done
 done
+
+
+
+
+# python3 -m qkv_steer.generate \
+#           --config configs/continuous_attribution_sign.yaml \
+#           --dataset truthfulqa \
+#           --llm-alias qwen2.5_7b \
+#           --run-name test \
+#           --detector-checkpoint detectors/qwen2.5_7b_truthfulqa_QK/best.pt \
+#           --keep-channels QK \
+#           --n-samples 10 --verbose --alpha 7
+
+# python3 -m qkv_steer.evaluate --run-name test --method llm_judge_cloud

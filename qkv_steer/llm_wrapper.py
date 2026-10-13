@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import torch
 
 from qkv_steer._vendor.cam import attribution_field, load_detector
@@ -8,6 +10,8 @@ from qkv_steer._vendor.qkv_hooks import VIEWS, capture_all, qkv_hooks
 from qkv_steer._vendor.run_extraction import build_prompt_ids, load_llm, resolve_stop_tokens, truncate_runon
 from qkv_steer._vendor.tensor_ops import build_feature_field
 from qkv_steer.hooks import register_steer_hooks, remove_hooks
+
+logger = logging.getLogger("qkv_steer.generate")
 
 
 class LLM_Wrapper:
@@ -64,6 +68,9 @@ class LLM_Wrapper:
         return images, mask
 
     def detect(self, field: torch.Tensor) -> float:
+        if field.shape[0] == 0:
+            logger.warning("detect() got a 0-token field (generation collapsed to no real content) -- returning P(hallucinated)=1.0")
+            return 1.0
         images, mask = self._to_detector_input(field)
         with torch.no_grad():
             logit = self.detector(images, mask)

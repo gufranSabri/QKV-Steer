@@ -15,7 +15,6 @@ import torch
 import torch.nn as nn
 
 KERNEL_SIZE = 3
-HIDDEN = 16
 GATE_INIT_BIAS = -4.0  # sigmoid(-4) ~= 0.018 -- conv branch starts ~silent
 
 
@@ -30,6 +29,7 @@ class LayerGrid(nn.Module):
         use_gate: bool = True,
         use_conv: bool = True,
         use_skip: bool = True,
+        local_hidden: int = 16,
     ):
         super().__init__()
         if KERNEL_SIZE % 2 == 0:
@@ -47,9 +47,9 @@ class LayerGrid(nn.Module):
         if use_conv:
             pad = KERNEL_SIZE // 2
             self.local = nn.Sequential(
-                nn.Conv2d(in_ch, HIDDEN, kernel_size=(KERNEL_SIZE, 1), padding=(pad, 0)),
+                nn.Conv2d(in_ch, local_hidden, kernel_size=(KERNEL_SIZE, 1), padding=(pad, 0)),
                 nn.GELU(),
-                nn.Conv2d(HIDDEN, in_ch, kernel_size=(KERNEL_SIZE, 1), padding=(pad, 0)),
+                nn.Conv2d(local_hidden, in_ch, kernel_size=(KERNEL_SIZE, 1), padding=(pad, 0)),
             )
             if use_gate:
                 self.gate = nn.Conv2d(in_ch, in_ch, kernel_size=1)
