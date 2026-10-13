@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 
 from qkv_steer._vendor.cam import attribution_field, load_detector
-from qkv_steer._vendor.dataset import normalize
+from qkv_steer._vendor.dataset import normalize, zero_channels
 from qkv_steer._vendor.qkv_hooks import VIEWS, capture_all, qkv_hooks
 from qkv_steer._vendor.run_extraction import build_prompt_ids, load_llm, resolve_stop_tokens, truncate_runon
 from qkv_steer._vendor.tensor_ops import build_feature_field
@@ -57,6 +57,8 @@ class LLM_Wrapper:
         if self.stats is None:
             raise RuntimeError("detector not loaded -- pass detector_checkpoint to LLM_Wrapper")
         normed = normalize(field, self.stats)
+        if self.cfg.model.keep_channels is not None:
+            normed = zero_channels(normed, self.cfg.model.keep_channels)
         images = normed.permute(0, 3, 1, 2).unsqueeze(0).to(self.device)
         mask = torch.ones(1, field.shape[0], dtype=torch.bool, device=self.device)
         return images, mask

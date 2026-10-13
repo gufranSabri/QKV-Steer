@@ -129,15 +129,22 @@ class TrainConfig:
 
 @dataclass
 class SteerConfig:
-    mask_type: str = "binary"   # "binary" | "continuous"
-    threshold: float = 0.5      # only used when mask_type == "binary"
-    alpha: float = 1.0          # push strength multiplier
+    mask_type: str = "binary"        # "binary" | "continuous"
+    threshold: float = 0.5           # only used when mask_type == "binary"
+    alpha: float = 1.0               # push strength multiplier
+    steer_direction: str = "both"    # only used when mask_type == "continuous":
+                                      # "both" | "up_only" | "down_only"
 
     def validate(self) -> None:
         if self.mask_type not in ("binary", "continuous"):
             raise ValueError(f"steer.mask_type must be 'binary' or 'continuous', got {self.mask_type!r}")
         if self.alpha <= 0.0:
             raise ValueError("steer.alpha must be > 0")
+        if self.steer_direction not in ("both", "up_only", "down_only"):
+            raise ValueError(
+                f"steer.steer_direction must be 'both', 'up_only', or 'down_only', "
+                f"got {self.steer_direction!r}"
+            )
 
 
 @dataclass

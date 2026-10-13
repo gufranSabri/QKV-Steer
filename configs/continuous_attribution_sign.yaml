@@ -1,3 +1,4 @@
 steer:
   mask_type: continuous
   alpha: 1.0
+  steer_direction: both   # "both" | "up_only" | "down_only"

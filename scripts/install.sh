@@ -3,17 +3,14 @@
 # requirements.txt. Every SLURM script sources this.
 # Assumes the venv is already created and activated.
 #
-#   bash scripts/install.sh               # core deps only
+#   bash scripts/install.sh               # core deps + Lev (default evaluator)
 #   bash scripts/install.sh --bleurt      # + BLEURT evaluation
-#   bash scripts/install.sh --llm-judge   # + anthropic SDK for the LLM-judge evaluation
 
 set -euo pipefail
 
 WITH_BLEURT=0
-WITH_LLM_JUDGE=0
 for arg in "$@"; do
   [ "$arg" = "--bleurt" ] && WITH_BLEURT=1
-  [ "$arg" = "--llm-judge" ] && WITH_LLM_JUDGE=1
 done
 
 echo "[install] core dependencies"
@@ -34,14 +31,29 @@ pip install $PIP_FLAGS \
   pyyaml \
   tqdm \
   accelerate \
+  matplotlib \
+  openai \
   pytest
 
 echo "[install] core dependencies OK"
 
-if [ "$WITH_LLM_JUDGE" -eq 1 ]; then
-  echo "[install] anthropic SDK (LLM-judge evaluation)"
-  pip install $PIP_FLAGS anthropic
-fi
+# Lev (interfaze-ai/lev): the default evaluate.py judge. Git install, so it
+# can NOT come from the offline wheelhouse -- deliberately drops $PIP_FLAGS
+# and hits the network, same as BLEURT below.
+echo "[install] Lev (local hallucination judge)"
+pip install "lev[serve] @ git+https://github.com/Abhinavexists/lev#subdirectory=packages/lev"
+
+python - <<'PY'
+import lev
+model = lev.load("interfaze-ai/lev")
+result = model.system_one(
+    "The sky is blue during a clear day.",
+    {"true_statement": {"type": "noul", "instructions": "Is this statement true?"}},
+)
+p = result.answers["true_statement"].noul
+assert p > 0.5, f"Lev is loaded but scoring nonsense (p={p})"
+print(f"[install] Lev OK  (p_true={p:.3f})")
+PY
 
 # Git install, so it can NOT come from the offline wheelhouse -- these lines
 # deliberately drop $PIP_FLAGS and hit the network.

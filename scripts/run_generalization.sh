@@ -10,6 +10,7 @@ RERUN=${RERUN:-0}
 LLM_ALIAS=${LLM_ALIAS:-llama3.1_8b}
 WINNING_CONFIG=${WINNING_CONFIG:-configs/binary_mass_mean.yaml}
 EXTRA_ARGS=${EXTRA_ARGS:-}
+read -ra EVAL_METHODS <<< "${EVAL_METHODS:-lev}"
 
 for DATASET in triviaqa coqa; do
   RUN_NAME="$(basename "$WINNING_CONFIG" .yaml)_${DATASET}"
@@ -36,5 +37,7 @@ for DATASET in triviaqa coqa; do
     continue
   fi
 
-  python3 -m qkv_steer.evaluate --run-name "$RUN_NAME" --method bleurt
+  for EVAL_METHOD in "${EVAL_METHODS[@]}"; do
+    python3 -m qkv_steer.evaluate --run-name "$RUN_NAME" --method "$EVAL_METHOD"
+  done
 done

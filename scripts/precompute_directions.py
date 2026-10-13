@@ -39,7 +39,8 @@ def main():
         "n_segments": n_segments,
     }
     direction, sigma = load_or_compute_direction(
-        args.cache_dir, key, lambda: mass_mean_direction(loader.training_fields())
+        args.cache_dir, key,
+        lambda: mass_mean_direction(loader.training_fields(), keep_channels=cfg.model.keep_channels),
     )
     print(f"direction shape={tuple(direction.shape)} sigma shape={tuple(sigma.shape)}")
 
