@@ -29,6 +29,3 @@ export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 bash scripts/install.sh #--bleurt
 
 python -c "import torch; print('CUDA:', torch.cuda.is_available(), '|', torch.cuda.get_device_name())"
-
-bash scripts/run_comparison.sh
-python scripts/summarize_runs.py

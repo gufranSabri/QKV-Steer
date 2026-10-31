@@ -1,4 +1,0 @@
-steer:
-  mask_type: binary
-  threshold: 0.2
-  alpha: 1.0
