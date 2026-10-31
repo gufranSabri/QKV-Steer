@@ -74,7 +74,7 @@ def run(run_name: str, method: str, bleurt_checkpoint: str, bleurt_threshold: fl
     n_diverged = sum(1 for r in rows if r.get("response_unsteered_diverged"))
     p_deltas = [
         r["p_hallucinated_steered"] - r["p_hallucinated_unsteered"]
-        for r in rows if "p_hallucinated_unsteered" in r
+        for r in rows if r.get("p_hallucinated_steered") is not None
     ]
     metrics_path = run_dir / "steer_metrics.json"
     all_metrics = json.loads(metrics_path.read_text()) if metrics_path.exists() else {}

@@ -124,6 +124,9 @@ def run(
                     f"  saved: {unsteered['response']!r}\n"
                     f"  live:  {gen['response']!r}"
                 )
+            if gen["field"].shape[0] == 0:
+                logger.warning(f"idx={example.idx}: unsteered generation kept 0 tokens -- nothing to steer, skipping")
+                continue
             if verbose:
                 log_field_by_view(f"idx={example.idx} field", gen["field"])
 
@@ -145,14 +148,17 @@ def run(
                 example.prompt, cfg.dataset.max_new_tokens, steer_pushes=pushes
             )
             p_before = wrapper.detect(gen["field"])
-            p_after = wrapper.detect(steered["field"])
+            p_after = wrapper.detect(steered["field"]) if steered["field"].shape[0] > 0 else None
 
             if verbose:
                 log_field_by_view(f"idx={example.idx} steered_field", steered["field"])
-                logger.info(
-                    f"idx={example.idx} P(hallucinated): {p_before:.4f} -> {p_after:.4f} "
-                    f"(delta {p_after - p_before:+.4f})"
-                )
+                if p_after is None:
+                    logger.info(f"idx={example.idx} P(hallucinated): {p_before:.4f} -> n/a (steered kept 0 tokens)")
+                else:
+                    logger.info(
+                        f"idx={example.idx} P(hallucinated): {p_before:.4f} -> {p_after:.4f} "
+                        f"(delta {p_after - p_before:+.4f})"
+                    )
                 save_example_figure(figures_dir, example.idx, saliency, mask, pushes, p_before, p_after)
 
             row = {
@@ -192,7 +198,8 @@ def run(
         with open(out_path) as f:
             for line in f:
                 row = json.loads(line)
-                all_deltas.append(row["p_hallucinated_steered"] - row["p_hallucinated_unsteered"])
+                if row["p_hallucinated_steered"] is not None:
+                    all_deltas.append(row["p_hallucinated_steered"] - row["p_hallucinated_unsteered"])
         if all_deltas:
             save_run_summary_figure(figures_dir, all_deltas)
 

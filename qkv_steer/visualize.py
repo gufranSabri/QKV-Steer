@@ -54,11 +54,8 @@ def save_example_figure(
             ax.set_ylabel("layer (L)")
             fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-    fig.suptitle(
-        f"idx={idx}  P(hallucinated): {p_before:.4f} -> {p_after:.4f} "
-        f"(delta {p_after - p_before:+.4f})",
-        fontsize=12,
-    )
+    after = "n/a (steered kept 0 tokens)" if p_after is None else f"{p_after:.4f} (delta {p_after - p_before:+.4f})"
+    fig.suptitle(f"idx={idx}  P(hallucinated): {p_before:.4f} -> {after}", fontsize=12)
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     fig.savefig(out_dir / f"idx{idx:05d}.png", dpi=130)
     plt.close(fig)
